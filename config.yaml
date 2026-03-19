@@ -1,0 +1,108 @@
+# ==============================================================================
+# IMU ROS Bag Analyzer - Configuration File
+# ==============================================================================
+
+# IMU topic name in the bag file
+imu_topic: /imu/data_raw
+
+# ROS version: "auto" (detect from file extension), "ros1", or "ros2"
+# auto detection rules:
+#   .bag file          -> ros1
+#   directory with metadata.yaml, .db3, .mcap -> ros2
+ros_version: auto
+
+# ROS message typestore for deserialization.
+# For ROS1 bags: ROS1_NOETIC
+# For ROS2 bags: ROS2_HUMBLE | ROS2_IRON | ROS2_JAZZY | ROS2_FOXY | LATEST
+ros_typestore: ROS2_HUMBLE
+
+# Output directory for saved plot images
+output_dir: ./output
+
+# Save plots to disk as PNG files
+save_plots: true
+
+# Display plots interactively (requires a display / GUI environment)
+show_plots: false
+
+# ------------------------------------------------------------------------------
+# Frequency domain settings
+# ------------------------------------------------------------------------------
+
+# Window function applied before FFT: hann | hamming | blackman | none
+fft_window: hann
+
+# Minimum peak height as a fraction of the spectrum maximum (0.0 - 1.0)
+# Peaks below this threshold are not reported
+fft_peak_min_height: 0.05
+
+# Minimum separation (in frequency bins) between detected peaks
+fft_peak_min_distance: 5
+
+# ------------------------------------------------------------------------------
+# Filter configuration (up to 2 stages applied sequentially)
+# ------------------------------------------------------------------------------
+filters:
+  # Set to true to enable filtering and generate filtered analysis outputs
+  enabled: false
+
+  # Filter stages (maximum 2). Each stage has:
+  #   type:   mean | pt1 | biquad | butterworth | notch
+  #   params: type-specific parameters (see reference below)
+  stages: []
+
+  # ------------------------------------------------------------------------------
+  # Filter type reference:
+  # ------------------------------------------------------------------------------
+  #
+  # mean (moving average - numpy only, no scipy required):
+  #   stages:
+  #     - type: mean
+  #       params:
+  #         window_size: 5        # number of samples in averaging window
+  #
+  # pt1 (first-order low-pass IIR - numpy only, no scipy required):
+  #   stages:
+  #     - type: pt1
+  #       params:
+  #         time_constant_s: 0.01 # filter time constant in seconds
+  #
+  # biquad (user-supplied Direct Form II coefficients - numpy only):
+  #   stages:
+  #     - type: biquad
+  #       params:
+  #         b0: 1.0   # numerator coefficients
+  #         b1: 0.0
+  #         b2: 0.0
+  #         a1: 0.0   # denominator coefficients (a0 = 1 assumed)
+  #         a2: 0.0
+  #
+  # butterworth (Butterworth IIR - requires scipy >= 1.11):
+  #   stages:
+  #     - type: butterworth
+  #       params:
+  #         order: 4              # filter order
+  #         cutoff_hz: 50.0       # cutoff frequency in Hz (for low/high)
+  #         filter_kind: low      # low | high | band
+  #         # For band filter, use low_cutoff_hz and high_cutoff_hz instead:
+  #         # low_cutoff_hz: 10.0
+  #         # high_cutoff_hz: 100.0
+  #
+  # notch (IIR notch filter - requires scipy >= 1.11):
+  #   stages:
+  #     - type: notch
+  #       params:
+  #         notch_freq_hz: 50.0   # frequency to attenuate (Hz)
+  #         quality_factor: 30.0  # Q factor; higher = narrower notch
+  #
+  # Example: two-stage pipeline (low-pass then notch)
+  # stages:
+  #   - type: butterworth
+  #     params:
+  #       order: 4
+  #       cutoff_hz: 100.0
+  #       filter_kind: low
+  #   - type: notch
+  #     params:
+  #       notch_freq_hz: 50.0
+  #       quality_factor: 30.0

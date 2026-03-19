@@ -1,0 +1,12 @@
+# IMU ROS Bag Analyzer - Dependencies
+
+# Core numerical and plotting
+numpy>=1.24
+matplotlib>=3.7
+PyYAML>=5.4
+
+# ROS bag reading (pure Python, supports ROS1 .bag and ROS2 .db3/.mcap/directory)
+rosbags>=0.9.0
+
+# Signal processing (required)
+scipy>=1.11
