@@ -140,7 +140,13 @@ def read_imu_data(
 
         for _conn, ts, rawdata in reader.messages(**kwargs):
             msg = deserialize(rawdata, msgtype)
-            timestamps.append(ts)
+            # Prefer header.stamp (sensor time) over bag reception timestamp.
+            # header.stamp is stored as sec + nanosec fields.
+            try:
+                stamp_ns = int(msg.header.stamp.sec) * 1_000_000_000 + int(msg.header.stamp.nanosec)
+            except AttributeError:
+                stamp_ns = 0
+            timestamps.append(stamp_ns if stamp_ns > 0 else ts)
             ax_list.append(float(msg.linear_acceleration.x))
             ay_list.append(float(msg.linear_acceleration.y))
             az_list.append(float(msg.linear_acceleration.z))
@@ -157,8 +163,8 @@ def read_imu_data(
     ts_ns = np.array(timestamps, dtype=np.int64)
     ts_s = (ts_ns - ts_ns[0]).astype(np.float64) / 1e9
 
-    dts = np.diff(ts_s)
-    sample_rate = 1.0 / float(np.median(dts)) if len(dts) > 0 else 0.0
+    duration = float(ts_s[-1] - ts_s[0]) if len(ts_s) > 1 else 0.0
+    sample_rate = (len(ts_s) - 1) / duration if duration > 0 else 0.0
 
     return ImuData(
         timestamps_ns=ts_ns,
