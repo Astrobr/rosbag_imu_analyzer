@@ -210,6 +210,7 @@ def main() -> None:
 
     raw_freq = compute_freq_domain_metrics(
         imu_data, cfg.fft_window, cfg.fft_peak_min_height, cfg.fft_peak_min_distance,
+        cfg.fft_freq_start_hz,
     )
     print("\n" + format_freq_summary(raw_freq, title="--- Frequency Domain Peaks ---"))
 
@@ -255,6 +256,7 @@ def main() -> None:
         filt_freq = compute_freq_domain_metrics(
             filtered_data, cfg.fft_window,
             cfg.fft_peak_min_height, cfg.fft_peak_min_distance,
+            cfg.fft_freq_start_hz,
         )
         print("\n" + format_freq_summary(filt_freq, title="--- Filtered Frequency Domain Peaks ---"))
 
@@ -288,6 +290,7 @@ def main() -> None:
 
         filter_char = compute_filter_characterization(
             imu_data, filtered_data, window=cfg.fft_window,
+            freq_start_hz=cfg.fft_freq_start_hz,
         )
         print("\n" + format_filter_characterization(filter_char))
 

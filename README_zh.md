@@ -5,7 +5,7 @@
 ## 功能特性
 
 - **时域分析**：绘制加速度与角速度时域波形，计算均值、标准差、RMS、最大值、最小值、峰峰值
-- **频域分析**：FFT 频谱图，支持 Hann/Hamming/Blackman 窗，自动检测频率峰值
+- **频域分析**：FFT 频谱图，默认不加窗直接对原始信号做 FFT，频谱从 0.1 Hz 显示到奈奎斯特频率（排除直流分量），自动检测频率峰值；支持 Hann/Hamming/Blackman 窗可选
 - **多级滤波**：最多两级串联滤波，支持均值滤波、PT1、Biquad、Butterworth、陷波滤波
 - **滤波器特性分析**：
   - 频率衰减曲线（dB），标注各频率点衰减量、-3 dB 和 -6 dB 参考线
@@ -194,7 +194,13 @@ show_plots: false
 
 ```yaml
 # FFT 窗函数：hann | hamming | blackman | none
-fft_window: hann
+# none（默认）：不加窗，直接对原始信号做 FFT
+fft_window: none
+
+# 频谱起始频率（Hz）
+# 低于此频率的 bin 不参与主频/峰值计算，也不显示在图中
+# 图像 x 轴仍从 0 Hz 开始，该范围留白，直流分量不出现
+fft_freq_start_hz: 0.1
 
 # 峰值检测最小高度（相对于频谱最大值的比例，0.0~1.0）
 fft_peak_min_height: 0.05
@@ -387,9 +393,11 @@ save_plots: true    # 保存图片到磁盘
 
 ### 频域分析
 
-对信号加窗后进行 FFT，输出归一化单边幅度谱：
+对信号可选加窗后进行 FFT（默认不加窗），归一化单边幅度谱：
 
-$$X[k] = \frac{2}{N} \left| \text{FFT}(x \cdot w)[k] \right|$$
+$$X[k] = \frac{2}{N} \left| \text{FFT}(x)[k] \right|, \quad k \geq 1$$
+
+低于 `fft_freq_start_hz`（默认 0.1 Hz）的 bin 在裁剪后不参与主频和峰值的计算，因此这些指标始终在有效频率范围内。频谱图 x 轴从 0 Hz 开始，0 到 `fft_freq_start_hz` 之间无数据（留白），直流分量不出现在图中。总功率在裁剪前对完整频谱计算（含直流）。
 
 ### 滤波器衰减
 

@@ -40,9 +40,10 @@ def compute_axis_freq_metrics(
     label: str,
     data: np.ndarray,
     sample_rate_hz: float,
-    window: str = "hann",
+    window: str = "none",
     peak_min_height: float = 0.1,
     peak_min_distance: int = 5,
+    freq_start_hz: float = 0.1,
 ) -> AxisFreqMetrics:
     n = len(data)
 
@@ -53,22 +54,27 @@ def compute_axis_freq_metrics(
         "blackman":np.blackman(n),
         "none":    np.ones(n),
     }
-    win = win_map.get(window, np.hanning(n))
+    win = win_map.get(window, np.ones(n))
 
     windowed = data * win
     fft_vals = np.fft.rfft(windowed)
     freqs = np.fft.rfftfreq(n, d=1.0 / sample_rate_hz)
 
-    # Normalized single-sided amplitude spectrum
-    magnitudes = np.abs(fft_vals) * 2.0 / n
+    # Single-sided amplitude spectrum: abs(X)/N * 2
+    magnitudes = np.abs(fft_vals) / n * 2.0
     magnitudes[0] /= 2.0  # DC bin is not doubled
 
-    # Dominant frequency: highest non-DC bin
-    non_dc_mag = magnitudes[1:].copy()
-    dominant_idx = int(np.argmax(non_dc_mag)) + 1
-    dominant_freq = float(freqs[dominant_idx])
-
     total_power = float(np.sum(magnitudes ** 2))
+
+    # Trim spectrum to [freq_start_hz, Nyquist] before computing peaks/dominant
+    if freq_start_hz > 0.0:
+        start_idx = int(np.searchsorted(freqs, freq_start_hz))
+        freqs = freqs[start_idx:]
+        magnitudes = magnitudes[start_idx:]
+
+    # Dominant frequency: highest bin in the trimmed spectrum
+    dominant_idx = int(np.argmax(magnitudes))
+    dominant_freq = float(freqs[dominant_idx])
 
     peaks = _find_peaks(freqs, magnitudes, peak_min_height, peak_min_distance)
 
@@ -108,9 +114,10 @@ def _find_peaks(
 
 def compute_freq_domain_metrics(
     imu_data: ImuData,
-    window: str = "hann",
+    window: str = "none",
     peak_min_height: float = 0.1,
     peak_min_distance: int = 5,
+    freq_start_hz: float = 0.1,
 ) -> FreqDomainMetrics:
     fs = imu_data.sample_rate_hz
     kwargs = dict(
@@ -118,6 +125,7 @@ def compute_freq_domain_metrics(
         window=window,
         peak_min_height=peak_min_height,
         peak_min_distance=peak_min_distance,
+        freq_start_hz=freq_start_hz,
     )
     return FreqDomainMetrics(
         accel_x=compute_axis_freq_metrics("accel_x", imu_data.accel_x, **kwargs),

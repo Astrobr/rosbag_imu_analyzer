@@ -164,6 +164,8 @@ def plot_freq_domain(
         ax.set_ylabel("Amplitude", fontsize=9)
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
+        if len(fm.frequencies):
+            ax.set_xlim(0, fm.frequencies[-1])
 
     plt.tight_layout()
     _save_or_show(fig, save_path, show)
@@ -234,6 +236,8 @@ def plot_freq_comparison(
         ax.set_ylabel("Amplitude", fontsize=9)
         ax.legend(fontsize=8)
         ax.grid(True, alpha=0.3)
+        if len(raw_fm.frequencies):
+            ax.set_xlim(0, raw_fm.frequencies[-1])
 
     plt.tight_layout()
     _save_or_show(fig, save_path, show)

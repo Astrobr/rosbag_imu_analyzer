@@ -37,6 +37,7 @@ class AnalyzerConfig:
     save_plots: bool
     show_plots: bool
     fft_window: str
+    fft_freq_start_hz: float
     fft_peak_min_height: float
     fft_peak_min_distance: int
     filters: FilterConfig
@@ -73,11 +74,15 @@ def load_config(config_path: str | Path) -> AnalyzerConfig:
     save_plots = bool(_get(raw, "save_plots", True))
     show_plots = bool(_get(raw, "show_plots", False))
 
-    fft_window = str(_get(raw, "fft_window", "hann")).lower()
+    fft_window = str(_get(raw, "fft_window", "none")).lower()
     if fft_window not in VALID_WINDOWS:
         raise ValueError(
             f"Invalid fft_window '{fft_window}'. Valid: {sorted(VALID_WINDOWS)}"
         )
+
+    fft_freq_start_hz = float(_get(raw, "fft_freq_start_hz", 0.1))
+    if fft_freq_start_hz < 0.0:
+        raise ValueError("fft_freq_start_hz must be >= 0")
 
     fft_peak_min_height = float(_get(raw, "fft_peak_min_height", 0.1))
     fft_peak_min_distance = int(_get(raw, "fft_peak_min_distance", 5))
@@ -113,6 +118,7 @@ def load_config(config_path: str | Path) -> AnalyzerConfig:
         save_plots=save_plots,
         show_plots=show_plots,
         fft_window=fft_window,
+        fft_freq_start_hz=fft_freq_start_hz,
         fft_peak_min_height=fft_peak_min_height,
         fft_peak_min_distance=fft_peak_min_distance,
         filters=filters,

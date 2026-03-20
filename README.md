@@ -5,7 +5,7 @@ A Python-based IMU data analysis tool supporting ROS1 and ROS2 bag files. Perfor
 ## Features
 
 - **Time-domain analysis**: Plot acceleration and angular velocity waveforms; compute mean, standard deviation, RMS, max, min, and peak-to-peak values
-- **Frequency-domain analysis**: FFT spectra with Hann/Hamming/Blackman windowing and automatic peak detection
+- **Frequency-domain analysis**: FFT spectra with configurable windowing (default: no window); spectrum displayed from 0.1 Hz to Nyquist to exclude DC; automatic peak detection
 - **Multi-stage filtering**: Up to two cascaded filter stages — mean, PT1, Biquad, Butterworth, and notch filters
 - **Filter characterization**:
   - Frequency attenuation curve (dB) with -3 dB and -6 dB reference lines and per-frequency annotations
@@ -194,7 +194,14 @@ show_plots: false
 
 ```yaml
 # FFT window function: hann | hamming | blackman | none
-fft_window: hann
+# none (default): no windowing — direct FFT on the raw signal.
+fft_window: none
+
+# Spectrum display start frequency (Hz).
+# Bins below this value are excluded from all calculations (dominant frequency,
+# peaks) and from plots. The plot x-axis still starts at 0 Hz; the region
+# below this threshold is left blank so the DC component does not appear.
+fft_freq_start_hz: 0.1
 
 # Minimum peak height as a fraction of the spectrum maximum (0.0–1.0)
 fft_peak_min_height: 0.05
@@ -387,9 +394,11 @@ This is expected. When the raw signal has little or no energy at a given frequen
 
 ### Frequency-domain analysis
 
-Signals are windowed before FFT. The normalized single-sided amplitude spectrum is:
+Signals are optionally windowed before FFT (default: no window). The normalized single-sided amplitude spectrum is:
 
-$$X[k] = \frac{2}{N} \left| \text{FFT}(x \cdot w)[k] \right|$$
+$$X[k] = \frac{2}{N} \left| \text{FFT}(x)[k] \right|, \quad k \geq 1$$
+
+Bins below `fft_freq_start_hz` (default 0.1 Hz) are excluded before computing dominant frequency and peaks, so those metrics are always within the valid range. The spectrum plot x-axis starts at 0 Hz with the region below `fft_freq_start_hz` left blank — the DC component does not appear. Total power is computed on the full spectrum (including DC) before the trim.
 
 ### Filter attenuation
 

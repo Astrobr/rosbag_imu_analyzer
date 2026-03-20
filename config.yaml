@@ -30,7 +30,10 @@ show_plots: false
 # ------------------------------------------------------------------------------
 
 # Window function applied before FFT: hann | hamming | blackman | none
-fft_window: hann
+fft_window: none
+
+# Spectrum display start frequency (Hz). Bins below this are excluded from plots.
+fft_freq_start_hz: 0.1
 
 # Minimum peak height as a fraction of the spectrum maximum (0.0 - 1.0)
 # Peaks below this threshold are not reported

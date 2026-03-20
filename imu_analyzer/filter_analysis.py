@@ -59,8 +59,9 @@ def _compute_axis_attenuation(
     raw: np.ndarray,
     filtered: np.ndarray,
     sample_rate_hz: float,
-    window: str = "hann",
+    window: str = "none",
     key_freqs_hz: Optional[List[float]] = None,
+    freq_start_hz: float = 0.1,
 ) -> AxisAttenuationMetrics:
     n = len(raw)
 
@@ -70,7 +71,7 @@ def _compute_axis_attenuation(
         "blackman": np.blackman(n),
         "none":     np.ones(n, dtype=np.float64),
     }
-    win = win_map.get(window, np.hanning(n))
+    win = win_map.get(window, np.ones(n, dtype=np.float64))
 
     raw_mag      = np.abs(np.fft.rfft(raw.astype(np.float64)      * win))
     filtered_mag = np.abs(np.fft.rfft(filtered.astype(np.float64) * win))
@@ -96,7 +97,7 @@ def _compute_axis_attenuation(
     # Restore NaN for noise-floor bins
     attenuation_db = np.where(valid_mask, attenuation_db, np.nan)
 
-    # Probe at key frequencies (nearest bin)
+    # Probe at key frequencies (nearest bin, before trimming)
     db_at_key: Dict[float, float] = {}
     if key_freqs_hz:
         for f in key_freqs_hz:
@@ -104,6 +105,12 @@ def _compute_axis_attenuation(
                 continue
             idx = int(np.argmin(np.abs(freqs - f)))
             db_at_key[float(freqs[idx])] = float(attenuation_db[idx])
+
+    # Trim to [freq_start_hz, Nyquist] for display (matching MATLAB approach)
+    if freq_start_hz > 0.0:
+        start_idx = int(np.searchsorted(freqs, freq_start_hz))
+        freqs = freqs[start_idx:]
+        attenuation_db = attenuation_db[start_idx:]
 
     return AxisAttenuationMetrics(
         label=label,
@@ -165,8 +172,9 @@ def _compute_axis_delay(
 def compute_filter_characterization(
     raw: ImuData,
     filtered: ImuData,
-    window: str = "hann",
+    window: str = "none",
     key_freqs_hz: Optional[List[float]] = None,
+    freq_start_hz: float = 0.1,
 ) -> FilterCharacterization:
     """
     Compute frequency attenuation and time delay for all 6 IMU channels.
@@ -177,6 +185,7 @@ def compute_filter_characterization(
         window:       FFT window type (hann/hamming/blackman/none).
         key_freqs_hz: Frequencies (Hz) at which to report attenuation values.
                       Defaults to [1, 5, 10, 20, 50, 100] clipped to Nyquist.
+        freq_start_hz: Low-frequency cutoff for display (default 0.1 Hz, matching MATLAB).
     """
     fs = raw.sample_rate_hz
     nyq = fs / 2.0
@@ -186,7 +195,7 @@ def compute_filter_characterization(
         key_freqs_hz = [f for f in candidates if f < nyq]
 
     def _at(label, r, f):
-        return _compute_axis_attenuation(label, r, f, fs, window, key_freqs_hz)
+        return _compute_axis_attenuation(label, r, f, fs, window, key_freqs_hz, freq_start_hz)
 
     def _dl(label, r, f):
         return _compute_axis_delay(label, r, f, fs)
