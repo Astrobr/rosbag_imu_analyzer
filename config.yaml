@@ -52,7 +52,14 @@ filters:
   # Filter stages (maximum 2). Each stage has:
   #   type:   mean | pt1 | biquad | butterworth | notch
   #   params: type-specific parameters (see reference below)
-  stages: []
+  stages: 
+    - type: pt1
+      params: 
+        time_constant_s: 0.01
+    - type: notch
+      params:
+        notch_freq_hz: 75
+        quality_factor: 20
 
   # ------------------------------------------------------------------------------
   # Filter type reference:

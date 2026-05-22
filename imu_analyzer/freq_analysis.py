@@ -112,6 +112,56 @@ def _find_peaks(
     ]
 
 
+def select_display_peaks(fm: "AxisFreqMetrics") -> List[FreqPeak]:
+    """Select one representative peak per 10%-wide frequency bin, then filter
+    out close neighbours, keeping the strongest.
+
+    Algorithm:
+    1. Compute span = Nyquist - freq_start  (the displayed frequency range).
+    2. Divide span into 10 equal bins (each 10% of span).
+    3. For each bin, pick the highest-magnitude peak inside it (if any).
+    4. From these bin representatives, greedily deduplicate: sort by magnitude
+       descending, accept each candidate only if it is >= 5% of span away from
+       every already-accepted peak (so the stronger peak always wins).
+    5. Sort survivors by magnitude descending for display.
+    """
+    if not fm.peaks or len(fm.frequencies) == 0:
+        return []
+
+    freq_start = float(fm.frequencies[0])
+    freq_end   = float(fm.frequencies[-1])
+    span = freq_end - freq_start
+    if span <= 0:
+        return []
+
+    bin_width   = span / 10.0
+    min_gap_hz  = span * 0.05
+
+    # Step 1-3: one best peak per 10%-wide bin
+    bin_reps: List[FreqPeak] = []
+    for i in range(10):
+        lo = freq_start + i * bin_width
+        hi = lo + bin_width
+        # Include right edge only for the last bin to avoid floating-point gaps
+        candidates = [p for p in fm.peaks if lo <= p.frequency_hz < hi]
+        if i == 9:
+            candidates = [p for p in fm.peaks if lo <= p.frequency_hz <= hi]
+        if candidates:
+            bin_reps.append(max(candidates, key=lambda p: p.magnitude))
+
+    # Step 4: greedy dedup — if two reps are closer than 5% of span, keep the stronger
+    bin_reps.sort(key=lambda p: p.magnitude, reverse=True)
+    survivors: List[FreqPeak] = []
+    for candidate in bin_reps:
+        if not any(abs(candidate.frequency_hz - kept.frequency_hz) < min_gap_hz
+                   for kept in survivors):
+            survivors.append(candidate)
+
+    # Step 5: sort by magnitude descending
+    survivors.sort(key=lambda p: p.magnitude, reverse=True)
+    return survivors
+
+
 def compute_freq_domain_metrics(
     imu_data: ImuData,
     window: str = "none",
@@ -143,8 +193,8 @@ def format_freq_summary(metrics: FreqDomainMetrics, title: str = "") -> str:
     if title:
         lines.append(title)
 
-    header = f"{'Channel':<12} {'Dominant (Hz)':>14} {'Top Peaks (Hz @ magnitude)':}"
-    sep = "-" * 70
+    header = f"{'Channel':<12} {'Dominant (Hz)':>14} {'Dispersed Peaks (Hz @ magnitude, by magnitude)':}"
+    sep = "-" * 80
     lines += [header, sep]
 
     all_axes = [
@@ -152,9 +202,9 @@ def format_freq_summary(metrics: FreqDomainMetrics, title: str = "") -> str:
         metrics.gyro_x,  metrics.gyro_y,  metrics.gyro_z,
     ]
     for fm in all_axes:
-        top_peaks = sorted(fm.peaks, key=lambda p: p.magnitude, reverse=True)[:5]
+        display = select_display_peaks(fm)  # already sorted by magnitude desc
         peak_str = "  ".join(
-            f"{p.frequency_hz:.2f}@{p.magnitude:.4f}" for p in top_peaks
+            f"{p.frequency_hz:.2f}Hz@{p.magnitude:.4f}" for p in display
         ) or "(none)"
         lines.append(f"{fm.label:<12} {fm.dominant_freq_hz:>14.2f}     {peak_str}")
     lines.append(sep)

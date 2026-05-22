@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from .data_model import ImuData
 from .time_analysis import TimeDomainMetrics
-from .freq_analysis import FreqDomainMetrics, FreqPeak
+from .freq_analysis import FreqDomainMetrics, FreqPeak, select_display_peaks
 
 # Use non-interactive backend when not showing plots interactively
 matplotlib.rcParams["figure.dpi"] = 100
@@ -141,9 +141,8 @@ def plot_freq_domain(
             label=f"dominant={fm.dominant_freq_hz:.2f}Hz",
         )
 
-        # Mark detected peaks — deduplicate within 20 Hz windows first
-        top_peaks = sorted(fm.peaks, key=lambda p: p.magnitude, reverse=True)[:8]
-        display_peaks = _deduplicate_peaks(top_peaks, min_gap_hz=20.0)
+        # Mark dispersed peaks: one per 10%-span bin, pairs < 5%-span apart removed
+        display_peaks = select_display_peaks(fm)
         for peak in display_peaks:
             ax.axvline(peak.frequency_hz, color="red", alpha=0.5,
                        linestyle="--", linewidth=0.8)
